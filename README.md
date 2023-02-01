@@ -2,8 +2,6 @@
 ## Spring 2023
 ## Project 1: A "data story" on the history of philosophy
 
-<img src="figs/100126-the-glass.jpeg" width="500">
-
 ![Topic](https://user-images.githubusercontent.com/123684111/216142065-686e60f8-a8d2-429a-bbc6-2048f26ea0ed.png)
 
 ### [Project Description](doc/)
