@@ -1,0 +1,94 @@
+def show_wordcloud(df):
+  stopwords = set(STOPWORDS)
+  schools = ['capitalism','communism']
+  for sc in schools:
+      df_temp = df[df.school==sc]
+      
+      print('School = ', sc.upper(), ':')
+      
+      # render wordcloud
+      text = " ".join(txt for txt in df_temp.sentence_lowered)
+      wordcloud = WordCloud(stopwords=stopwords, max_font_size=50, max_words=200,
+                            width = 500, height = 300,
+                            background_color="white").generate(text)
+      plt.figure(figsize=(12,8))
+      plt.imshow(wordcloud, interpolation="bilinear")
+      plt.axis("off")
+      plt.show()
+
+
+# print top n keywords for each topic
+def print_topic_words(tfidf_model, lda_model, n_words):
+    words = np.array(tfidf_model.get_feature_names())
+    topic_words = []
+    # for each topic, we have words weight
+    for topic_words_weights in lda_model.components_:
+        top_words = topic_words_weights.argsort()[::-1][:n_words]
+        topic_words.append(words.take(top_words))
+    return topic_words
+
+
+def words_importance_rank(data):
+  tfidf_model = TfidfVectorizer(max_df=0.99, max_features=1000,
+                  min_df=0.01, stop_words='english',
+                  use_idf=True, ngram_range=(1,1))
+  tfidf_matrix = tfidf_model.fit_transform(data.tokenized_txt) #fit the vectorizer to synopses
+
+  lda = LatentDirichletAllocation(n_components=5,random_state=100)
+  lda_output = lda.fit_transform(tfidf_matrix)
+  topic_word = lda.components_
+
+  topic_names = ["Topic" + str(i) for i in range(lda.n_components)]
+  doc_names = ["Doc" + str(i) for i in range(len(data))]
+  df_document_topic = pd.DataFrame(np.round(lda_output, 2), columns=topic_names, index=doc_names)
+  topic = np.argmax(df_document_topic.values, axis=1)
+  df_document_topic['topic'] = topic
+  df_topic_words = pd.DataFrame(lda.components_)
+  df_topic_words.columns = tfidf_model.get_feature_names()
+  df_topic_words.index = topic_names
+  topic_keywords = print_topic_words(tfidf_model=tfidf_model, lda_model=lda, n_words=10)        
+  df_topic_words = pd.DataFrame(topic_keywords)
+  df_topic_words.columns = ['Word '+str(i) for i in range(df_topic_words.shape[1])]
+  df_topic_words.index = ['Topic '+str(i) for i in range(df_topic_words.shape[0])]
+  return df_topic_words
+
+
+from nltk.sentiment.vader import SentimentIntensityAnalyzer
+
+def SentimentAnlysis(sentence):
+    sentAnalyzer = SentimentIntensityAnalyzer() 
+    sentDict = sentAnalyzer.polarity_scores(sentence)
+    
+    if sentDict['compound'] >= 0.05:
+      return "positive"
+    elif sentDict['compound'] <= -0.05 :
+      return "negative"
+    else:
+      return "neutral"
+
+# Main Function
+def Pie_plot(df): 
+    #making a Corpus and finding sentiments
+    corpus = ''
+    numPostives = 0
+    numNegatives = 0
+    numNeutrals = 0
+    
+    for mem in df['sentence_lowered']:
+        corpus += mem
+    
+    for i in range (len(df)):
+        sent = (SentimentAnlysis(df['sentence_lowered'].iloc[i]))
+        if sent == "positive":
+            numPostives += 1
+        elif sent == "negative":
+            numNegatives += 1
+        else:
+            numNeutrals += 1
+    
+    plt.figure(figsize = (7, 7))
+    plt.pie([numPostives, numNegatives, numNeutrals], labels = ['positives', 'negatives', 'neutrals'], autopct='%1.2f%%')
+    if df.school.iloc[0]== "communism":
+      plt.title('Sentiment Analysis for Communism')
+    else:
+      plt.title('Sentiment Analysis for Capitalism')
